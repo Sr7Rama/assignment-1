@@ -4,6 +4,11 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// 1. Root Route (Health Check)
+app.get('/', (req, res) => {
+  res.send('Assignment 1 Prototype: Return/Backoff & Inventory API is Live.');
+});
+
 // Mock In-Memory Inventory Database
 const inventoryDB = {
   'SKU-101': { name: 'Wireless Mouse', stock: 15 },
@@ -20,12 +25,12 @@ async function retryWithBackoff(operation, maxRetries = 4, baseDelay = 300) {
       return await operation(attempts);
     } catch (error) {
       if (attempts >= maxRetries) {
-        throw new Error(`Inventory system unreachable after ${maxRetries} attempts. Cause: ${error.message}`);
+        throw new Error(`Operation failed after ${maxRetries} attempts. Cause: ${error.message}`);
       }
       const temp = baseDelay * Math.pow(2, attempts - 1);
-      const delay = Math.floor(Math.random() * temp); // Jitter
-      console.log(`[INVENTORY RETRY] Attempt ${attempts} failed. Retrying in ${delay}ms...`);
-      await new Promise((resolve) => setTimeout(resolve, delay));
+      const delay = Math.floor(Math.random() * temp);
+      console.log(`[RETRY] Attempt ${attempts} failed. Retrying in ${delay}ms...`);
+      await new Promise((res) => setTimeout(res, delay));
     }
   }
 }
@@ -74,9 +79,27 @@ app.get('/api/inventory/:sku', async (req, res) => {
   } catch (err) {
     res.status(503).json({
       success: false,
-      error: 'Inventory check failed due to network instability.',
+      error: 'Inventory query failed.',
       details: err.message
     });
+  }
+});
+
+// 3. Flaky Task Retry Route
+app.get('/api/run-task', async (req, res) => {
+  try {
+    const result = await retryWithBackoff((attempt) => {
+      return new Promise((resolve, reject) => {
+        if (Math.random() > 0.6) {
+          resolve({ status: 200, message: `Success on attempt ${attempt}` });
+        } else {
+          reject(new Error(`Service unavailable on attempt ${attempt}`));
+        }
+      });
+    });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
