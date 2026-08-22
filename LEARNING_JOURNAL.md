@@ -36,6 +36,18 @@ UnhandledPromiseRejectionWarning: Unhandled promise rejection.
 
 **Resolution:** Wrapped execution inside an `async`/`try-catch` block inside `retryWithBackoff`.
 
+### Blocker 4: Flaky Stock Queries Causing False "Out of Stock" Responses
+
+**Error Log:**
+
+```text
+Error: Database timeout during stock check
+```
+
+**Root Cause:** Network drops or transient database lag caused stock queries to fail, leading support tools to incorrectly report items as out of stock.
+
+**Resolution:** Wrapped live stock checks in `retryWithBackoff`. If a database attempt times out, the service retries up to 4 times before returning a `503` failure status, ensuring completed answers represent accurate real-time inventory.
+
 ## Key Takeaways & Learnings
 
 - Adding jitter (randomization) to exponential backoff prevents synchronized retry bursts.
