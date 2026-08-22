@@ -48,6 +48,14 @@ Error: Database timeout during stock check
 
 **Resolution:** Wrapped live stock checks in `retryWithBackoff`. If a database attempt times out, the service retries up to 4 times before returning a `503` failure status, ensuring completed answers represent accurate real-time inventory.
 
+### Blocker 5: Cannot GET / Error on Root Deployment
+
+**Error Log:** `Cannot GET /` (404 status on root URL)
+
+**Root Cause:** The base `app.get('/', ...)` route was overwritten when the `/api/inventory/:sku` endpoint was introduced.
+
+**Resolution:** Re-added the root `GET` handler in `index.js` to serve a health-check message, returning `200 OK` for requests to the base URL.
+
 ## Key Takeaways & Learnings
 
 - Adding jitter (randomization) to exponential backoff prevents synchronized retry bursts.
